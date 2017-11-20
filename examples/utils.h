@@ -60,16 +60,28 @@ struct PointCloud
 
 };
 
-template <typename T>
-void generateRandomPointCloud(PointCloud<T> &point, const size_t N, const T max_range = 10)
+template <class T>
+struct OriginalGenerator
+{
+	OriginalGenerator(T mr) : max_range(mr) {}
+	T operator () ()
+	{
+		return max_range * T(rand() % 1000) / T(1000);		
+	}
+	T max_range;
+};
+
+template <typename T, typename G = OriginalGenerator<T> >
+void generateRandomPointCloud(PointCloud<T> &point, const size_t N, const T max_range = T(10))
 {
 	// Generating Random Point Cloud
+	G g(max_range);
 	point.pts.resize(N);
 	for (size_t i = 0; i < N; i++)
 	{
-		point.pts[i].x = max_range * (rand() % 1000) / T(1000);
-		point.pts[i].y = max_range * (rand() % 1000) / T(1000);
-		point.pts[i].z = max_range * (rand() % 1000) / T(1000);
+		point.pts[i].x = g();
+		point.pts[i].y = g();
+		point.pts[i].z = g();
 	}
 }
 

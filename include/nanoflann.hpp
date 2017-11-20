@@ -973,11 +973,11 @@ namespace nanoflann
 					max_span = span;
 				}
 			}
-			ElementType max_spread = -1;
+			ElementType max_spread(-1);
 			cutfeat = 0;
 			for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
 				ElementType span = bbox[i].high-bbox[i].low;
-				if (span > (1 - EPS) * max_span) {
+				if (span > max_span * (ElementType(1) - EPS)) {
 					ElementType min_elem, max_elem;
 					computeMinMax(obj, ind, count, i, min_elem, max_elem);
 					ElementType spread = max_elem - min_elem;;
@@ -988,7 +988,7 @@ namespace nanoflann
 				}
 			}
 			// split in the middle
-			DistanceType split_val = (bbox[cutfeat].low + bbox[cutfeat].high) / 2;
+			DistanceType split_val = (bbox[cutfeat].low + bbox[cutfeat].high) / ElementType(2);
 			ElementType min_elem, max_elem;
 			computeMinMax(obj, ind, count, cutfeat, min_elem, max_elem);
 
@@ -1247,10 +1247,10 @@ namespace nanoflann
                 return false;
 			if (!BaseClassRef::root_node)
                 throw std::runtime_error("[nanoflann] findNeighbors() called before building the index.");
-			float epsError = 1 + searchParams.eps;
+			DistanceType epsError(1 + searchParams.eps);
 
 			distance_vector_t dists; // fixed or variable-sized container (depending on DIM)
-			dists.assign((DIM > 0 ? DIM : BaseClassRef::dim), 0); // Fill it with zeros.
+			dists.assign((DIM > 0 ? DIM : BaseClassRef::dim), ElementType(0)); // Fill it with zeros.
 			DistanceType distsq = this->computeInitialDistances(*this, vec, dists);
 			searchLevel(result, vec, BaseClassRef::root_node, distsq, dists, epsError);  // "count_leaf" parameter removed since was neither used nor returned to the user.
             return result.full();
@@ -1348,7 +1348,7 @@ namespace nanoflann
 		 */
 		template <class RESULTSET>
                 bool searchLevel(RESULTSET& result_set, const ElementType* vec, const NodePtr node, DistanceType mindistsq,
-						 distance_vector_t& dists, const float epsError) const
+						 distance_vector_t& dists, const DistanceType epsError) const
 		{
 			/* If this is a leaf node, then do check and return. */
 			if ((node->child1 == NULL) && (node->child2 == NULL)) {
@@ -1376,7 +1376,7 @@ namespace nanoflann
 			NodePtr bestChild;
 			NodePtr otherChild;
 			DistanceType cut_dist;
-			if ((diff1 + diff2) < 0) {
+			if ((diff1 + diff2) < ElementType(0)) {
 				bestChild = node->child1;
 				otherChild = node->child2;
 				cut_dist = distance.accum_dist(val, node->node_type.sub.divhigh, idx);
@@ -1568,7 +1568,7 @@ namespace nanoflann
                 return false;
 			if (!BaseClassRef::root_node)
                 return false;
-			float epsError = 1 + searchParams.eps;
+			DistanceType epsError(1 + searchParams.eps);
 
 			distance_vector_t dists; // fixed or variable-sized container (depending on DIM)
 			dists.assign((DIM > 0 ? DIM : BaseClassRef::dim) , 0); // Fill it with zeros.
