@@ -391,7 +391,7 @@ namespace nanoflann
 	  * \tparam _DistanceType Type of distance variables (must be signed) (e.g. float, double)
 	  * orientation is constrained to be in [-pi, pi]
 	  */
-	template<class T, class DataSource, typename _DistanceType = T>
+	template<class T, class DataSource, typename _DistanceType = T, T pi = (T)(M_PI)>
 	struct SO2_Adaptor
 	{
 		typedef T ElementType;
@@ -410,10 +410,10 @@ namespace nanoflann
 		{
 			DistanceType result = DistanceType();
 			result = b - a;
-			if (result > M_PI)
-				result -= 2. * M_PI;
-			else if (result < -M_PI)
-				result += 2. * M_PI;
+			if (result > pi)
+				result -= 2 * pi;
+			else if (result < -pi)
+				result += 2 * pi;
 			return result;
 		}
 	};
@@ -966,6 +966,7 @@ namespace nanoflann
 		void middleSplit_(Derived &obj, IndexType* ind, IndexType count, IndexType& index, int& cutfeat, DistanceType& cutval, const BoundingBox& bbox)
 		{
 			const DistanceType EPS = static_cast<DistanceType>(0.00001);
+			const DistanceType ONEmEPS = (ElementType(1) - EPS);
 			ElementType max_span = bbox[0].high-bbox[0].low;
 			for (int i = 1; i < (DIM > 0 ? DIM : obj.dim); ++i) {
 				ElementType span = bbox[i].high - bbox[i].low;
@@ -977,7 +978,7 @@ namespace nanoflann
 			cutfeat = 0;
 			for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
 				ElementType span = bbox[i].high-bbox[i].low;
-				if (span > max_span * (ElementType(1) - EPS)) {
+				if (span > max_span * ONEmEPS) {
 					ElementType min_elem, max_elem;
 					computeMinMax(obj, ind, count, i, min_elem, max_elem);
 					ElementType spread = max_elem - min_elem;;
