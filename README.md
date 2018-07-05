@@ -6,7 +6,7 @@
 
 ## 1. About 
 
-*nanoflann* is a **C++ [header-only](http://en.wikipedia.org/wiki/Header-only) library** for building KD-Trees of datasets with different topologies: R<sup>2</sup>, R<sup>3</sup> (point clouds), SO(2) and SO(3) (2D and 3D rotation groups). No support for approximate NN is provided. *nanoflann* does not require compiling or installing. You just need to `#include <nanoflann.hpp>` in your code.
+*nanoflann* is a **C++11 [header-only](http://en.wikipedia.org/wiki/Header-only) library** for building KD-Trees of datasets with different topologies: R<sup>2</sup>, R<sup>3</sup> (point clouds), SO(2) and SO(3) (2D and 3D rotation groups). No support for approximate NN is provided. *nanoflann* does not require compiling or installing. You just need to `#include <nanoflann.hpp>` in your code.
 
 This library is a *fork* of the [flann library](http://people.cs.ubc.ca/~mariusm/index.php/FLANN/FLANN) by Marius Muja and David G. Lowe, and born as a child project of [MRPT](https://www.mrpt.org/). Following the original license terms, *nanoflann* is distributed under the BSD license. Please, for bugs use the issues button or fork and open a pull request.
 
@@ -23,13 +23,13 @@ Cite as:
 ### 1.1. Obtaining the code
 
 * Easiest way: clone this GIT repository and take the `include/nanoflann.hpp` file for use where you need it.
-* OSX users can install `nanoflann` with [Homebrew](https://brew.sh) with:
+* macOS users can install `nanoflann` with [Homebrew](https://brew.sh) with:
   ```shell
-  $ brew install homebrew/science/nanoflann
+  $ brew install brewsci/science/nanoflann
   ```
   or
   ```shell
-  $ brew tap homebrew/science
+  $ brew tap brewsci/science
   $ brew install nanoflann
   ```
 * Linux users can install it with [Linuxbrew](https://linuxbrew.sh/) with: `brew install homebrew/science/nanoflann`
@@ -53,8 +53,8 @@ Although nanoflann itself doesn't have to be compiled, you can build some exampl
   * KD-tree look-up with `kdd_search()` and `radius_search()`: [pointcloud_kdd_radius.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/pointcloud_kdd_radius.cpp)
   * KD-tree look-up on a point cloud dataset: [pointcloud_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/pointcloud_example.cpp)
   * KD-tree look-up on a dynamic point cloud dataset: [dynamic_pointcloud_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/dynamic_pointcloud_example.cpp)
-  * KD-tree look-up on a rotaion group (SO2): [SO2_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/SO2_example.cpp)
-  * KD-tree look-up on a rotaion group (SO3): [SO3_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/SO3_example.cpp)
+  * KD-tree look-up on a rotation group (SO2): [SO2_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/SO2_adaptor_example.cpp)
+  * KD-tree look-up on a rotation group (SO3): [SO3_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/SO3_adaptor_example.cpp)
   * KD-tree look-up on a point cloud dataset with an external adaptor class: [pointcloud_adaptor_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/pointcloud_adaptor_example.cpp)
   * KD-tree look-up directly on an `Eigen::Matrix<>`: [matrix_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/matrix_example.cpp)
   * KD-tree look-up directly on `std::vector<std::vector<T> >` or `std::vector<Eigen::VectorXd>`: [vector_of_vectors_example.cpp](https://github.com/jlblancoc/nanoflann/blob/master/examples/vector_of_vectors_example.cpp)
@@ -73,25 +73,25 @@ Although nanoflann itself doesn't have to be compiled, you can build some exampl
 
   * **Memory efficiency**: Instead of making a copy of the entire dataset into a custom `flann`-like matrix before building a KD-tree index, `nanoflann` allows direct access to your data via an **adaptor interface** which must be implemented in your class. 
 
-Refer to the examples below or to the C++ API of [nanoflann::KDTreeSingleIndexAdaptor<>](http://nanoflann-reference.mrpt.org/svn/classnanoflann_1_1KDTreeSingleIndexAdaptor.html) for more info.
+Refer to the examples below or to the C++ API of [nanoflann::KDTreeSingleIndexAdaptor<>](http://jlblancoc.github.io/nanoflann/classnanoflann_1_1KDTreeSingleIndexAdaptor.html) for more info.
 
 
 ### 1.5. What can *nanoflann* do?
 
   * Building KD-trees with a single index (no randomized KD-trees, no approximate searches).
   * Fast, thread-safe querying for closest neighbors on KD-trees. The entry points are:
-    * [nanoflann::KDTreeSingleIndexAdaptor<>](http://nanoflann-reference.mrpt.org/svn/classnanoflann_1_1KDTreeSingleIndexAdaptor.html)`::knnSearch()`
+    * [nanoflann::KDTreeSingleIndexAdaptor<>](http://jlblancoc.github.io/nanoflann/classnanoflann_1_1KDTreeSingleIndexAdaptor.html)`::knnSearch()`
       * Finds the `num_closest` nearest neighbors to `query_point[0:dim-1]`. Their indices are stored inside the result object. See an [example usage code](https://github.com/jlblancoc/nanoflann/blob/master/examples/pointcloud_kdd_radius.cpp#L119).
-    * [nanoflann::KDTreeSingleIndexAdaptor<>](http://nanoflann-reference.mrpt.org/svn/classnanoflann_1_1KDTreeSingleIndexAdaptor.html)`::radiusSearch()`
+    * [nanoflann::KDTreeSingleIndexAdaptor<>](http://jlblancoc.github.io/nanoflann/classnanoflann_1_1KDTreeSingleIndexAdaptor.html)`::radiusSearch()`
       * Finds all the neighbors to `query_point[0:dim-1]` within a maximum radius. The output is given as a vector of pairs, of which the first element is a point index and the second the corresponding distance. See an [example usage code](https://github.com/jlblancoc/nanoflann/blob/master/examples/pointcloud_kdd_radius.cpp#L141).
-    * [nanoflann::KDTreeSingleIndexAdaptor<>](http://nanoflann-reference.mrpt.org/svn/classnanoflann_1_1KDTreeSingleIndexAdaptor.html)`::radiusSearchCustomCallback()`
+    * [nanoflann::KDTreeSingleIndexAdaptor<>](http://jlblancoc.github.io/nanoflann/classnanoflann_1_1KDTreeSingleIndexAdaptor.html)`::radiusSearchCustomCallback()`
 	  * Can be used to receive a callback for each point found in range. This may be more efficient in some situations instead of building a huge vector of pairs with the results.
-  * Works with 2D and 3D point clouds or N-dimensional data sets.
-  * Works directly with `Eigen::Matrix<>` classes (matrices and vectors-of-vectors).
-  * Works with dynamic point clouds without a need to rebuild entire kd-tree index.
-  * Works with the distance metrics: 
-    * `L1` (Manhattan) 
-    * `L2` (Euclidean, favoring SSE2 optimization). 
+  * Working with 2D and 3D point clouds or N-dimensional data sets.
+  * Working directly with `Eigen::Matrix<>` classes (matrices and vectors-of-vectors).
+  * Working with dynamic point clouds without a need to rebuild entire kd-tree index.
+  * Working with the distance metrics:
+    * `L1` (Manhattan)
+    * `L2` (Euclidean, favoring SSE2 optimization).
     * `L2_Simple` (Euclidean, for low-dimensionality data sets like point clouds).
     * `SO2` (for rotational groups SO2).
     * `SO3` (Euclidean, for rotational groups SO3).

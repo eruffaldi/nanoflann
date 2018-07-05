@@ -114,7 +114,7 @@ void generateRandomPointCloud(std::vector<std::vector<NUM> > &samples, const siz
 }
 
 template <typename NUM>
-void L2_vs_bruteforce_test(const size_t nSamples,const int DIM)
+void L2_vs_bruteforce_test(const size_t nSamples,const size_t DIM)
 {
 	std::vector<std::vector<NUM> > samples;
 
@@ -153,7 +153,7 @@ void L2_vs_bruteforce_test(const size_t nSamples,const int DIM)
 		for (size_t i=0;i<nSamples;i++)
 		{
 			double dist=0.0;
-			for (int d=0;d<DIM;d++)
+			for (size_t d=0;d<DIM;d++)
 				dist+= (query_pt[d]-samples[i][d])*(query_pt[d]-samples[i][d]);
 			if (dist<min_dist_L2)
 			{
@@ -165,7 +165,7 @@ void L2_vs_bruteforce_test(const size_t nSamples,const int DIM)
 	}
 
 	// Compare:
-	EXPECT_EQ(min_idx,ret_indexes[0]);
+	EXPECT_EQ(static_cast<size_t>(min_idx),ret_indexes[0]);
 	EXPECT_NEAR(min_dist_L2,out_dists_sqr[0],1e-3);
 }
 
@@ -218,7 +218,7 @@ void SO3_vs_bruteforce_test(const size_t nSamples)
 	}
 
 	// Compare:
-	EXPECT_EQ(min_idx,ret_indexes[0]);
+	EXPECT_EQ(static_cast<size_t>(min_idx),ret_indexes[0]);
 	EXPECT_NEAR(min_dist_L2,out_dists_sqr[0],1e-3);
 }
 
@@ -273,7 +273,7 @@ void SO2_vs_bruteforce_test(const size_t nSamples)
 		ASSERT_TRUE(min_idx!=-1);
 	}
 	// Compare:
-	EXPECT_EQ(min_idx,ret_indexes[0]);
+	EXPECT_EQ(static_cast<size_t>(min_idx),ret_indexes[0]);
 	EXPECT_NEAR(min_dist_SO2,out_dists_sqr[0],1e-3);
 }
 
@@ -303,8 +303,8 @@ void L2_dynamic_vs_bruteforce_test(const size_t nSamples)
 
 	// add points in chunks at a time
 	size_t chunk_size = 100;
-	size_t end;
-	for(int i=0; i<nSamples/2; i=i+chunk_size)
+	size_t end = 0;
+	for(size_t i=0; i<nSamples/2; i=i+chunk_size)
 	{
 		end = min(size_t(i+chunk_size), nSamples/2-1);
 		index.addPoints(i, end);
@@ -339,10 +339,10 @@ void L2_dynamic_vs_bruteforce_test(const size_t nSamples)
 			ASSERT_TRUE(min_idx!=-1);
 		}
 		// Compare:
-		EXPECT_EQ(min_idx,ret_indexes[0]);
+		EXPECT_EQ(static_cast<size_t>(min_idx),ret_indexes[0]);
 		EXPECT_NEAR(min_dist_L2,out_dists_sqr[0],1e-3);
 	}
-	for(int i=end+1; i<nSamples; i=i+chunk_size)
+	for(size_t i=end+1; i<nSamples; i=i+chunk_size)
 	{
 		end = min(size_t(i+chunk_size), nSamples-1);
 		index.addPoints(i, end);
@@ -377,7 +377,7 @@ void L2_dynamic_vs_bruteforce_test(const size_t nSamples)
 			ASSERT_TRUE(min_idx!=-1);
 		}
 		// Compare:
-		EXPECT_EQ(min_idx,ret_indexes[0]);
+		EXPECT_EQ(static_cast<size_t>(min_idx),ret_indexes[0]);
 		EXPECT_NEAR(min_dist_L2,out_dists_sqr[0],1e-3);
 	}
 }
@@ -480,4 +480,32 @@ TEST(kdtree,L2_dynamic_vs_bruteforce)
 		L2_dynamic_vs_bruteforce_test<double>(100);
 		L2_dynamic_vs_bruteforce_test<double>(100);
 	}
+}
+
+TEST(kdtree,robust_nonempty_tree)
+{
+	// Try to build a dynamic tree with some initial points
+	PointCloud<double> cloud;
+	generateRandomPointCloud(cloud, 1000);
+
+	double query_pt[3] = { 0.5, 0.5, 0.5};
+
+	// construct a kd-tree index:
+	typedef KDTreeSingleIndexDynamicAdaptor<
+		L2_Simple_Adaptor<double, PointCloud<double> > ,
+		PointCloud<double>,
+		3
+		> my_kd_tree_simple_t;
+
+	my_kd_tree_simple_t index1(3 /*dim*/, cloud, KDTreeSingleIndexAdaptorParams(10 /* max leaf */) );
+
+	// Try a search and expect a neighbor to exist because the dynamic tree was passed a non-empty cloud
+	const size_t num_results = 1;
+	std::vector<size_t>   ret_index(num_results);
+	std::vector<double> out_dist_sqr(num_results);
+	nanoflann::KNNResultSet<double> resultSet(num_results);
+	resultSet.init(&ret_index[0], &out_dist_sqr[0] );
+	bool result = index1.findNeighbors(resultSet, &query_pt[0],
+		nanoflann::SearchParams(10));
+	EXPECT_EQ(result, true);
 }

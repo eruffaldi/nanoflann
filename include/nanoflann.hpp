@@ -47,6 +47,7 @@
 #define  NANOFLANN_HPP_
 
 #include <vector>
+#include <array>
 #include <cassert>
 #include <algorithm>
 #include <stdexcept>
@@ -69,6 +70,65 @@ namespace nanoflann
 {
 /** @addtogroup nanoflann_grp nanoflann C++ library for ANN
   *  @{ */
+
+	/**
+	 * Traits if object is resizable and assignable (typically has a resize | assign method)
+	 */
+  	template <typename T, typename = int>
+	struct has_resize : std::false_type {};
+
+	template <typename T>
+	struct has_resize <T, decltype((void) std::declval<T>().resize(1), 0)> : std::true_type {};
+
+	template <typename T, typename = int>
+	struct has_assign : std::false_type {};
+
+	template <typename T>
+	struct has_assign <T, decltype((void) std::declval<T>().assign(1, 0), 0)> : std::true_type {};
+
+	/**
+	 * Free function to resize a resizable object
+	 */
+	template <typename Container>
+	inline typename std::enable_if<has_resize<Container>::value, void>::type
+	resize(Container& c, const size_t nElements)
+	{ 
+		c.resize(nElements);
+	}
+
+	/**
+	 * Free function that has no effects on non resizable containers (e.g. std::array)
+	 * It raises an exception if the expected size does not match
+	 */
+	template <typename Container>
+	inline typename std::enable_if<!has_resize<Container>::value, void>::type
+	resize(Container& c, const size_t nElements)
+	{
+		if(nElements != c.size())
+			throw std::logic_error("Try to change the size of a std::array.");
+	}
+
+	/**
+	 * Free function to assign to a container
+	 */
+	template <typename Container, typename T>
+	inline typename std::enable_if<has_assign<Container>::value, void>::type
+	assign(Container& c, const size_t nElements, const T& value)
+	{
+		c.assign(nElements, value);
+	}
+
+	/**
+	 * Free function to assign to a std::array
+	 */
+	template <typename Container, typename T>
+	inline typename std::enable_if<!has_assign<Container>::value, void>::type
+	assign(Container& c, const size_t nElements, const T& value)
+	{
+		for (size_t i=0;i<nElements;i++)
+			c[i]=value;
+	}
+
 
   	/** Library version: 0xMmP (M=Major,m=minor,P=patch) */
 	#define NANOFLANN_VERSION 0x123
@@ -668,118 +728,13 @@ namespace nanoflann
 	/** @addtogroup nanoflann_metaprog_grp Auxiliary metaprogramming stuff
 	  * @{ */
 
-	// ----------------  CArray -------------------------
-	/** A STL container (as wrapper) for arrays of constant size defined at compile time (class imported from the MRPT project)
-	 * This code is an adapted version from Boost, modifed for its integration
-	 *	within MRPT (JLBC, Dec/2009) (Renamed array -> CArray to avoid possible potential conflicts).
-	 * See
-	 *      http://www.josuttis.com/cppcode
-	 * for details and the latest version.
-	 * See
-	 *      http://www.boost.org/libs/array for Documentation.
-	 * for documentation.
-	 *
-	 * (C) Copyright Nicolai M. Josuttis 2001.
-	 * Permission to copy, use, modify, sell and distribute this software
-	 * is granted provided this copyright notice appears in all copies.
-	 * This software is provided "as is" without express or implied
-	 * warranty, and with no claim as to its suitability for any purpose.
-	 *
-	 * 29 Jan 2004 - minor fixes (Nico Josuttis)
-	 * 04 Dec 2003 - update to synch with library TR1 (Alisdair Meredith)
-	 * 23 Aug 2002 - fix for Non-MSVC compilers combined with MSVC libraries.
-	 * 05 Aug 2001 - minor update (Nico Josuttis)
-	 * 20 Jan 2001 - STLport fix (Beman Dawes)
-	 * 29 Sep 2000 - Initial Revision (Nico Josuttis)
-	 *
-	 * Jan 30, 2004
-	 */
-    template <typename T, std::size_t N>
-    class CArray {
-      public:
-        T elems[N];    // fixed-size array of elements of type T
-
-      public:
-        // type definitions
-        typedef T              value_type;
-        typedef T*             iterator;
-        typedef const T*       const_iterator;
-        typedef T&             reference;
-        typedef const T&       const_reference;
-        typedef std::size_t    size_type;
-        typedef std::ptrdiff_t difference_type;
-
-        // iterator support
-        inline iterator begin() { return elems; }
-        inline const_iterator begin() const { return elems; }
-        inline iterator end() { return elems+N; }
-        inline const_iterator end() const { return elems+N; }
-
-        // reverse iterator support
-#if !defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION) && !defined(BOOST_MSVC_STD_ITERATOR) && !defined(BOOST_NO_STD_ITERATOR_TRAITS)
-        typedef std::reverse_iterator<iterator> reverse_iterator;
-        typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-#elif defined(_MSC_VER) && (_MSC_VER == 1300) && defined(BOOST_DINKUMWARE_STDLIB) && (BOOST_DINKUMWARE_STDLIB == 310)
-        // workaround for broken reverse_iterator in VC7
-        typedef std::reverse_iterator<std::_Ptrit<value_type, difference_type, iterator,
-                                      reference, iterator, reference> > reverse_iterator;
-        typedef std::reverse_iterator<std::_Ptrit<value_type, difference_type, const_iterator,
-                                      const_reference, iterator, reference> > const_reverse_iterator;
-#else
-        // workaround for broken reverse_iterator implementations
-        typedef std::reverse_iterator<iterator,T> reverse_iterator;
-        typedef std::reverse_iterator<const_iterator,T> const_reverse_iterator;
-#endif
-
-        reverse_iterator rbegin() { return reverse_iterator(end()); }
-        const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
-        reverse_iterator rend() { return reverse_iterator(begin()); }
-        const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
-        // operator[]
-        inline reference operator[](size_type i) { return elems[i]; }
-        inline const_reference operator[](size_type i) const { return elems[i]; }
-        // at() with range check
-        reference at(size_type i) { rangecheck(i); return elems[i]; }
-        const_reference at(size_type i) const { rangecheck(i); return elems[i]; }
-        // front() and back()
-        reference front() { return elems[0]; }
-        const_reference front() const { return elems[0]; }
-        reference back() { return elems[N-1]; }
-        const_reference back() const { return elems[N-1]; }
-        // size is constant
-        static inline size_type size() { return N; }
-        static bool empty() { return false; }
-        static size_type max_size() { return N; }
-        enum { static_size = N };
-		/** This method has no effects in this class, but raises an exception if the expected size does not match */
-		inline void resize(const size_t nElements) { if (nElements!=N) throw std::logic_error("Try to change the size of a CArray."); }
-        // swap (note: linear complexity in N, constant for given instantiation)
-        void swap (CArray<T,N>& y) { std::swap_ranges(begin(),end(),y.begin()); }
-        // direct access to data (read-only)
-        const T* data() const { return elems; }
-        // use array as C array (direct read/write access to data)
-        T* data() { return elems; }
-        // assignment with type conversion
-        template <typename T2> CArray<T,N>& operator= (const CArray<T2,N>& rhs) {
-            std::copy(rhs.begin(),rhs.end(), begin());
-            return *this;
-        }
-        // assign one value to all elements
-        inline void assign (const T& value) { for (size_t i=0;i<N;i++) elems[i]=value; }
-        // assign (compatible with std::vector's one) (by JLBC for MRPT)
-        void assign (const size_t n, const T& value) { assert(N==n); for (size_t i=0;i<N;i++) elems[i]=value; }
-      private:
-        // check range (may be private because it is static)
-        static void rangecheck (size_type i) { if (i >= size()) { throw std::out_of_range("CArray<>: index out of range"); } }
-    }; // end of CArray
-
 	/** Used to declare fixed-size arrays when DIM>0, dynamically-allocated vectors when DIM=-1.
 	  * Fixed size version for a generic DIM:
 	  */
 	template <int DIM, typename T>
 	struct array_or_vector_selector
 	{
-		typedef CArray<T, DIM> container_t;
+		typedef std::array<T, DIM> container_t;
 	};
 	/** Dynamic size version */
 	template <typename T>
@@ -1156,10 +1111,9 @@ namespace nanoflann
 	template <typename Distance, class DatasetAdaptor, int DIM = -1, typename IndexType = size_t>
 	class KDTreeSingleIndexAdaptor : public KDTreeBaseClass<KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM, IndexType>, Distance, DatasetAdaptor, DIM, IndexType>
 	{
-	private:
-		/** Hidden copy constructor, to disallow copying indices (Not implemented) */
-		KDTreeSingleIndexAdaptor(const KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM, IndexType>&);
 	public:
+		/** Deleted copy constructor*/
+		KDTreeSingleIndexAdaptor(const KDTreeSingleIndexAdaptor<Distance, DatasetAdaptor, DIM, IndexType>&) = delete;
 		
 		/**
 		 * The dataset used by this index
@@ -1217,6 +1171,8 @@ namespace nanoflann
 		 */
 		void buildIndex()
 		{
+			BaseClassRef::m_size = dataset.kdtree_get_point_count();
+			BaseClassRef::m_size_at_index_build = BaseClassRef::m_size;
 			init_vind();
 			this->freeIndex(*this);
 			BaseClassRef::m_size_at_index_build = BaseClassRef::m_size;
@@ -1251,7 +1207,8 @@ namespace nanoflann
 			DistanceType epsError(1 + searchParams.eps);
 
 			distance_vector_t dists; // fixed or variable-sized container (depending on DIM)
-			dists.assign((DIM > 0 ? DIM : BaseClassRef::dim), ElementType(0)); // Fill it with zeros.
+			auto zero = static_cast<decltype(result.worstDist())>(0);
+			assign(dists, (DIM > 0 ? DIM : BaseClassRef::dim), zero); // Fill it with zeros.
 			DistanceType distsq = this->computeInitialDistances(*this, vec, dists);
 			searchLevel(result, vec, BaseClassRef::root_node, distsq, dists, epsError);  // "count_leaf" parameter removed since was neither used nor returned to the user.
             return result.full();
@@ -1320,7 +1277,7 @@ namespace nanoflann
 
 		void computeBoundingBox(BoundingBox& bbox)
 		{
-			bbox.resize((DIM > 0 ? DIM : BaseClassRef::dim));
+			resize(bbox, (DIM > 0 ? DIM : BaseClassRef::dim));
 			if (dataset.kdtree_get_bbox(bbox))
 			{
 				// Done! It was implemented in derived class
@@ -1470,7 +1427,7 @@ namespace nanoflann
 		/**
 		 * The dataset used by this index
 		 */
-		DatasetAdaptor &dataset; //!< The source of our data
+		const DatasetAdaptor &dataset; //!< The source of our data
 
 		KDTreeSingleIndexAdaptorParams index_params;
 
@@ -1506,7 +1463,7 @@ namespace nanoflann
 		 * @param inputData Dataset with the input features
 		 * @param params Basically, the maximum leaf node size
 		 */
-		KDTreeSingleIndexDynamicAdaptor_(const int dimensionality, DatasetAdaptor& inputData, std::vector<int>& treeIndex_, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams()) :
+		KDTreeSingleIndexDynamicAdaptor_(const int dimensionality, const DatasetAdaptor& inputData, std::vector<int>& treeIndex_, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams()) :
 			dataset(inputData), index_params(params), treeIndex(treeIndex_), distance(inputData)
 		{
 			BaseClassRef::root_node = NULL;
@@ -1571,8 +1528,8 @@ namespace nanoflann
                 return false;
 			DistanceType epsError(1 + searchParams.eps);
 
-			distance_vector_t dists; // fixed or variable-sized container (depending on DIM)
-			dists.assign((DIM > 0 ? DIM : BaseClassRef::dim) , 0); // Fill it with zeros.
+			distance_vector_t dists; // fixed or variable-sized container (depending on DIM)			
+			assign(dists, (DIM > 0 ? DIM : BaseClassRef::dim), 0); // Fill it with zeros.
 			DistanceType distsq = this->computeInitialDistances(*this, vec, dists);
 			searchLevel(result, vec, BaseClassRef::root_node, distsq, dists, epsError);  // "count_leaf" parameter removed since was neither used nor returned to the user.
             return result.full();
@@ -1634,7 +1591,8 @@ namespace nanoflann
 
 		void computeBoundingBox(BoundingBox& bbox)
 		{
-			bbox.resize((DIM > 0 ? DIM : BaseClassRef::dim));
+			resize(bbox, (DIM > 0 ? DIM : BaseClassRef::dim));
+
 			if (dataset.kdtree_get_bbox(bbox))
 			{
 				// Done! It was implemented in derived class
@@ -1761,7 +1719,7 @@ namespace nanoflann
 		/**
 		 * The dataset used by this index
 		 */
-		DatasetAdaptor &dataset; //!< The source of our data
+		const DatasetAdaptor &dataset; //!< The source of our data
 
 		std::vector<int> treeIndex; //!< treeIndex[idx] is the index of tree in which point at idx is stored. treeIndex[idx]=-1 means that point has been removed.
 
@@ -1817,18 +1775,24 @@ namespace nanoflann
 		 * @param inputData Dataset with the input features
 		 * @param params Basically, the maximum leaf node size
 		 */
-		KDTreeSingleIndexDynamicAdaptor(const int dimensionality, DatasetAdaptor& inputData, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams() , const size_t maximumPointCount = 1000000000U) :
+		KDTreeSingleIndexDynamicAdaptor(const int dimensionality, const DatasetAdaptor& inputData, const KDTreeSingleIndexAdaptorParams& params = KDTreeSingleIndexAdaptorParams() , const size_t maximumPointCount = 1000000000U) :
 			dataset(inputData), index_params(params), distance(inputData)
 		{
-			if (dataset.kdtree_get_point_count()) throw std::runtime_error("[nanoflann] cannot handle non empty point cloud.");
-			treeCount = log2(maximumPointCount);
+			treeCount = std::log2(maximumPointCount);
 			pointCount = 0U;
 			dim = dimensionality;
 			treeIndex.clear();
 			if (DIM > 0) dim = DIM;
 			m_leaf_max_size = params.leaf_max_size;
 			init();
+			int num_initial_points = dataset.kdtree_get_point_count();
+			if (num_initial_points > 0) {
+				addPoints(0, num_initial_points - 1);
+			}
 		}
+
+		/** Deleted copy constructor*/
+		KDTreeSingleIndexDynamicAdaptor(const KDTreeSingleIndexDynamicAdaptor<Distance, DatasetAdaptor, DIM, IndexType>&) = delete;
 
 
 		/** Add points to the set, Inserts all points from [start, end] */
@@ -1841,7 +1805,7 @@ namespace nanoflann
 				index[pos].vind.clear();
 				treeIndex[pointCount]=pos;
 				for(int i = 0; i < pos; i++) {
-					for(int j = 0; j < index[i].vind.size(); j++) {
+					for(int j = 0; j < static_cast<int>(index[i].vind.size()); j++) {
 						index[pos].vind.push_back(index[i].vind[j]);
 						treeIndex[index[i].vind[j]] = pos;
 					}
@@ -1922,10 +1886,9 @@ namespace nanoflann
 			index = new index_t( dims, *this /* adaptor */, nanoflann::KDTreeSingleIndexAdaptorParams(leaf_max_size ) );
 			index->buildIndex();
 		}
-	private:
-		/** Hidden copy constructor, to disallow copying this class (Not implemented) */
-		KDTreeEigenMatrixAdaptor(const self_t&);
 	public:
+		/** Deleted copy constructor */
+		KDTreeEigenMatrixAdaptor(const self_t&) = delete;
 
 		~KDTreeEigenMatrixAdaptor() {
 			delete index;
