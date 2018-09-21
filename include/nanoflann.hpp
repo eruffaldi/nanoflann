@@ -331,7 +331,7 @@ struct L1_Adaptor {
 
   inline DistanceType evalMetric(const T *a, const size_t b_idx, size_t size,
                                  DistanceType worst_dist = -1) const {
-    DistanceType result = DistanceType();
+    DistanceType result = DistanceType(0);
     const T *last = a + size;
     const T *lastgroup = last - 3;
     size_t d = 0;
@@ -382,7 +382,7 @@ struct L2_Adaptor {
 
   inline DistanceType evalMetric(const T *a, const size_t b_idx, size_t size,
                                  DistanceType worst_dist = -1) const {
-    DistanceType result = DistanceType();
+    DistanceType result = DistanceType(0);
     const T *last = a + size;
     const T *lastgroup = last - 3;
     size_t d = 0;
@@ -431,7 +431,7 @@ struct L2_Simple_Adaptor {
 
   inline DistanceType evalMetric(const T *a, const size_t b_idx,
                                  size_t size) const {
-    DistanceType result = DistanceType();
+    DistanceType result = DistanceType(0);
     for (size_t i = 0; i < size; ++i) {
       const DistanceType diff = a[i] - data_source.kdtree_get_pt(b_idx, i);
       result += diff * diff;
@@ -469,7 +469,7 @@ struct SO2_Adaptor {
   /** Note: this assumes that input angles are already in the range [-pi,pi] */
   template <typename U, typename V>
   inline DistanceType accum_dist(const U a, const V b, const size_t) const {
-    DistanceType result = DistanceType(), PI = pi_const<DistanceType>();
+    DistanceType result = DistanceType(0), PI = pi_const<DistanceType>();
     result = b - a;
     if (result > PI)
       result -= 2 * PI;
@@ -1006,7 +1006,7 @@ public:
                                        const ElementType *vec,
                                        distance_vector_t &dists) const {
     assert(vec);
-    DistanceType distsq = DistanceType();
+    DistanceType distsq = DistanceType(0);
 
     for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
       if (vec[i] < obj.root_bbox[i].low) {
@@ -1226,7 +1226,7 @@ public:
     if (!BaseClassRef::root_node)
       throw std::runtime_error(
           "[nanoflann] findNeighbors() called before building the index.");
-    float epsError = 1 + searchParams.eps;
+    DistanceType epsError(1 + searchParams.eps);
 
     distance_vector_t
         dists; // fixed or variable-sized container (depending on DIM)
@@ -1345,7 +1345,7 @@ public:
   template <class RESULTSET>
   bool searchLevel(RESULTSET &result_set, const ElementType *vec,
                    const NodePtr node, DistanceType mindistsq,
-                   distance_vector_t &dists, const float epsError) const {
+                   distance_vector_t &dists, const DistanceType epsError) const {
     /* If this is a leaf node, then do check and return. */
     if ((node->child1 == NULL) && (node->child2 == NULL)) {
       // count_leaf += (node->lr.right-node->lr.left);  // Removed since was
@@ -1586,7 +1586,7 @@ public:
       return false;
     if (!BaseClassRef::root_node)
       return false;
-    float epsError = 1 + searchParams.eps;
+    DistanceType epsError(1 + searchParams.eps);
 
     // fixed or variable-sized container (depending on DIM)
     distance_vector_t dists;
@@ -1694,7 +1694,7 @@ public:
   template <class RESULTSET>
   void searchLevel(RESULTSET &result_set, const ElementType *vec,
                    const NodePtr node, DistanceType mindistsq,
-                   distance_vector_t &dists, const float epsError) const {
+                   distance_vector_t &dists, const DistanceType epsError) const {
     /* If this is a leaf node, then do check and return. */
     if ((node->child1 == NULL) && (node->child2 == NULL)) {
       // count_leaf += (node->lr.right-node->lr.left);  // Removed since was
